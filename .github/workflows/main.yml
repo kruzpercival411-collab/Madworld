@@ -10,8 +10,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Find project folder
+        shell: pwsh
+        run: |
+          $f = Get-ChildItem -Recurse -Filter CMakeLists.txt | Where-Object { Select-String -Path $_.FullName -Pattern "juce_add_plugin\(Madworld" -Quiet } | Select-Object -First 1
+          if (-not $f) { Write-Error "Madworld CMakeLists.txt not found. Upload the Source folder and CMakeLists.txt from the zip."; exit 1 }
+          "SRC=$($f.DirectoryName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Building from $($f.DirectoryName)"
+
       - name: Configure
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+        run: cmake -S "${{ env.SRC }}" -B build -G "Visual Studio 17 2022" -A x64
 
       - name: Build
         run: cmake --build build --config Release --parallel
